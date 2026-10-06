@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "530275657239",
+    "project_id": "calm-3e974",
+    "storage_bucket": "calm-3e974.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:530275657239:android:588d49c17254af56171e52",
+        "android_client_info": {
+          "package_name": "com.unicamp.calm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV05xIeGq7vTDfcwmBnXlKwy9-gQgliwA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
