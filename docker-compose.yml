@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  hivemq:
+    image: hivemq/hivemq4:latest
+    container_name: hivemq
+    restart: always
+    ports:
+      - "8080:8080"
+      - "1883:1883"
+    environment:
+      - HIVEMQ_LICENSE_KEY=${HIVEMQ_LICENSE}
+      - HIVEMQ_LOG_BASED_CLUSTERING_ENABLED=true
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    restart: always
+    depends_on:
+      - hivemq
+    environment:
+      - INFLUX_TOKEN=${INFLUX_TOKEN}
+    command: ["telegraf", "--config", "${TELEGRAF_CONFIG_URL}"]
