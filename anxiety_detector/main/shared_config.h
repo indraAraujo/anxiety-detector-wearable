@@ -33,7 +33,7 @@ extern "C" {
 #define BMI160_I2C_ADDR         0x68
 
 // Configurações do Ring Buffer
-#define RING_BUF_CAPACITY     100       // 100 samples = 2.0 seconds of history @ 50Hz
+#define RING_BUF_CAPACITY     3000       // 60 segundos * 50 Hz
 #define HRV_BUFFER_SIZE       30
 
 // Configurações do Acelerômetro
@@ -53,7 +53,7 @@ extern "C" {
 #define HR_MIN_WINDOW_SEC     4
 #define HR_ANALYSIS_SEC       8
 #define HR_UPDATE_SEC         1
-#define HR_RING_SEC           15
+#define HR_RING_SEC           60
 #define HR_RING_SAMPLES       (HR_RING_SEC * HR_SAMPLE_RATE)
 #define HR_ANALYSIS_SAMPLES   (HR_ANALYSIS_SEC * HR_SAMPLE_RATE)
 #define HR_MIN_RING_SAMPLES   HR_SAMPLE_RATE

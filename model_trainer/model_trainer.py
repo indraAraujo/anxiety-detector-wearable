@@ -1,11 +1,8 @@
 import os
 import pickle
-import zipfile
-import urllib.request
 import numpy as np
 import m2cgen as m2c
 from sklearn.svm import LinearSVC
-from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, accuracy_score
@@ -72,14 +69,25 @@ for subject in SUBJECTS:
 
         # Filtra apenas Baseline (1) e Estresse (2)
         if most_frequent_label in [1, 2]:
-            # Feature do Acelerômetro: Magnitude Tridimensional
-            acc_mag = np.sqrt(np.sum(acc_win**2, axis=1))
-            acc_mean = np.mean(acc_mag)
-            acc_std = np.std(acc_mag)
+            # --- FEATURE DO ACELERÔMETRO (ENMO em g - Alinhado com BMI160 no ESP32) ---
+            # No Empatica E4 (WESAD), 64 LSB = 1g
+            acc_g = acc_win / 64.0
+            
+            # Magnitude tridimensional em g
+            acc_mag_g = np.sqrt(np.sum(acc_g**2, axis=1))
+            
+            # ENMO: Euclidean Norm Minus One (subtrai 1g da gravidade e toma o valor absoluto)
+            acc_enmo = np.abs(acc_mag_g - 1.0)
+            
+            acc_mean = np.mean(acc_enmo)
+            acc_std = np.std(acc_enmo)
 
-            # Features do PPG no domínio do tempo
-            ppg_mean = np.mean(ppg_win)
-            ppg_std = np.std(ppg_win)
+            # --- FEATURES DO PPG NO DOMÍNIO DO TEMPO ---
+            # Centraliza a janela de PPG removendo a média DC
+            ppg_win_centered = ppg_win - np.mean(ppg_win)
+            
+            ppg_mean = np.mean(ppg_win_centered)
+            ppg_std = np.std(ppg_win_centered)
 
             # Vetor de features: [PPG_mean, PPG_std, ACC_mean, ACC_std]
             X.append([ppg_mean, ppg_std, acc_mean, acc_std])
@@ -97,8 +105,6 @@ print(f"Classe 1 (Estresse): {np.sum(y == 1)}")
 # ==========================================
 # 2. DIVISÃO 80% TREINO / 20% TESTE
 # ==========================================
-# test_size=0.20 garante os 20% para teste e 80% para treino.
-# stratify=y mantém a proporção exata de amostras de estresse e repouso em ambos os conjuntos.
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.20, random_state=42, stratify=y
 )
@@ -116,7 +122,6 @@ scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 
-# LinearSVC não usa vetores de suporte internos -> m2cgen exporta sem erro de recursão
 clf = LinearSVC(C=1.0, class_weight='balanced', max_iter=10000, random_state=42)
 clf.fit(X_train_scaled, y_train)
 
@@ -132,7 +137,6 @@ print(classification_report(y_test, y_pred, target_names=['Repouso', 'Estresse']
 # ==========================================
 print("Exportando modelo para C/C++ usando m2cgen...")
 
-# O m2cgen exportará uma simples equação linear sem estourar a recursão
 code_c = m2c.export_to_c(clf)
 
 mean_str = ", ".join(map(str, scaler.mean_))

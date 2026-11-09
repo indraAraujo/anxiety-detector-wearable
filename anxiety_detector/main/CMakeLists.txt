@@ -3,8 +3,8 @@
 
 idf_component_register(
     # list the source files of this component
-    SRCS "mqtt_publisher.c" 
-         "hr_algorithm.c" 
+    SRCS "hr_algorithm.c" "inference_task.c" "mqtt_publisher.c" 
+         
          "main.c"
          "shared_config.c"
          "accelerometer.c"

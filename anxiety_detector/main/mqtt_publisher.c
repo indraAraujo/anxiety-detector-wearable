@@ -11,12 +11,11 @@
 
 #include "mqtt_publisher.h"
 
-#define WIFI_SSID      "DEBORA."
-#define WIFI_PASS      "2244022354"
+#define WIFI_SSID      "VIVOFIBRA-2701-5G"
+#define WIFI_PASS      "fHJPeRepqR"
 
 static const char *TAG = "MQTT_PUB";
 
-/* FreeRTOS event group para sinalizar quando o Wi-Fi está conectado */
 static EventGroupHandle_t s_wifi_event_group;
 #define WIFI_CONNECTED_BIT BIT0
 
@@ -28,13 +27,20 @@ static void wifi_event_handler(void* arg, esp_event_base_t event_base, int32_t e
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
     } else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
-        ESP_LOGI(TAG, "Reconectando ao Wi-Fi...");
+        ESP_LOGW(TAG, "Wi-Fi desconectado. Tentando reconectar...");
         xEventGroupClearBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+        mqtt_connected = false;
         esp_wifi_connect();
     } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         ESP_LOGI(TAG, "IP Obtido: " IPSTR, IP2STR(&event->ip_info.ip));
         xEventGroupSetBits(s_wifi_event_group, WIFI_CONNECTED_BIT);
+
+        // Se o Wi-Fi voltou e o cliente MQTT já existe, força a reconexão no broker
+        if (mqtt_client != NULL && !mqtt_connected) {
+            ESP_LOGI(TAG, "Reconectando MQTT após recuperação da rede...");
+            esp_mqtt_client_reconnect(mqtt_client);
+        }
     }
 }
 
@@ -79,12 +85,15 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
             break;
 
         case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGW(TAG, "Desconectado do Broker MQTT");
+            ESP_LOGW(TAG, "Desconectado do Broker MQTT. Tentando reconectar...");
             mqtt_connected = false;
+            // Força o cliente a tentar reconectar ao broker
+            esp_mqtt_client_reconnect(mqtt_client);
             break;
 
         case MQTT_EVENT_ERROR:
-            ESP_LOGE(TAG, "Erro na comunicação MQTT");
+            ESP_LOGE(TAG, "Erro na comunicação MQTT. Reagendando conexão...");
+            mqtt_connected = false;
             break;
 
         default:
@@ -94,9 +103,9 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 
 // --- INITIALIZE MQTT ---
 void init_mqtt(void) {
-    // Para HiveMQ público via TCP (porta 1883)
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://192.168.1.17:1883",
+        .broker.address.uri = "mqtt://192.168.43.200:1883",
+        .network.reconnect_timeout_ms = 5000, // Tenta reconectar a cada 5 segundos se falhar
     };
 
     mqtt_client = esp_mqtt_client_init(&mqtt_cfg);
@@ -107,15 +116,13 @@ void init_mqtt(void) {
 // --- FUNÇÃO DE PUBLICAÇÃO DE HEART RATE ---
 esp_err_t publish_heart_rate(int heart_rate, const char *device_id) {
     if (mqtt_client == NULL || !mqtt_connected) {
-        ESP_LOGW(TAG, "Falha ao publicar: Cliente MQTT não conectado.");
+        ESP_LOGW(TAG, "Falha ao publicar: Cliente MQTT não conectado. Aguardando reconexão...");
         return ESP_FAIL;
     }
 
     char payload[128];
-    // Monta a string JSON no formato exato solicitado
     snprintf(payload, sizeof(payload), "{\"heart_rate\": \"%d\", \"device_id\": \"%s\"}", heart_rate, device_id);
 
-    // Publica no tópico com QoS 1
     int msg_id = esp_mqtt_client_publish(mqtt_client, MQTT_TOPIC_HEART_RATE, payload, 0, 1, 0);
 
     if (msg_id != -1) {

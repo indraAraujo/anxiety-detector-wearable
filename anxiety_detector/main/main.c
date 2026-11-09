@@ -9,11 +9,9 @@
 #include "hr_algorithm.h"
 #include "mqtt_publisher.h"
 #include "nvs_flash.h"
+#include "inference_task.h"
 
 static const char *TAG = "ANXIETY_DETECTOR";
-
-// Declaração externa da instância global do algoritmo HR
-extern hr_algorithm_t g_hr_algorithm;
 
 void app_main(void) {
     ESP_LOGI(TAG, "Iniciando Anxiety Detector...");
@@ -25,22 +23,23 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
 
-    init_wifi();
-    init_mqtt();
+    esp_err_t ret_hr_algorithm = hr_algorithm_init(&g_hr_algorithm);
+    if (ret_hr_algorithm != ESP_OK) {
+        ESP_LOGE(TAG, "Falha ao inicializar algoritmo de BPM");
+        return;
+    }
 
-    // 1. Inicializa I2C e dispositivos
+    //init_wifi();
+    //init_mqtt();
+
     ESP_ERROR_CHECK(i2c_master_init());
 
-    // 2. Inicializa ring buffer do IMU
     ESP_ERROR_CHECK(ring_buf_init(&s_buf_imu));
 
-    // 3. Inicializa acelerômetro
     ESP_ERROR_CHECK(accelerometer_init());
 
-    // 4. Inicializa algoritmo HR (cria fila e mutex ANTES de criar a task)
     ESP_ERROR_CHECK(max30102_hr_algorithm_init());
 
-    // 5. Cria Task do Acelerômetro no CORE 0 (50Hz)
     xTaskCreatePinnedToCore(
         vTaskAccelerometer,
         "TaskAccel",
@@ -51,7 +50,6 @@ void app_main(void) {
         0
     );
 
-    // 6. Cria Task do MAX30102 no CORE 0 (50Hz - coleta dados e alimenta algoritmo)
     xTaskCreatePinnedToCore(
         vTaskMAX30102,
         "TaskMAX30102",
@@ -62,16 +60,7 @@ void app_main(void) {
         0
     );
 
-    // 7. Cria Task do Algoritmo HR no CORE 1 (1Hz - processa janelas espectrais)
-    xTaskCreatePinnedToCore(
-        hr_algorithm_task,
-        "TaskHRAlgo",
-        8192,  // Stack maior para FFT/DFT
-        &g_hr_algorithm,
-        4,     // Prioridade ligeiramente menor
-        NULL,
-        1
-    );
+    ESP_ERROR_CHECK(inference_task_init());
 
     ESP_LOGI(TAG, "Todas as tasks criadas. Sistema rodando.");
 }

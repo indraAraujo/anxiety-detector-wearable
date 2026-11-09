@@ -104,7 +104,6 @@ esp_err_t max30102_read_fifo(uint32_t *red, uint32_t *ir) {
     return ret;
 }
 
-// Lê status de interrupção e ponteiros do FIFO em uma única transação.
 static esp_err_t max30102_read_fifo_status(uint8_t *intr_status, uint8_t *wr, uint8_t *ovf, uint8_t *rd) {
     uint8_t buf[7];
 
@@ -121,7 +120,6 @@ static esp_err_t max30102_read_fifo_status(uint8_t *intr_status, uint8_t *wr, ui
     return ESP_OK;
 }
 
-// Lê n_samples amostras do FIFO em uma única transação (6 bytes por amostra).
 static esp_err_t max30102_read_fifo_burst(uint8_t *buf, int n_samples) {
     if (n_samples <= 0 || n_samples > MAX30102_FIFO_DEPTH) {
         return ESP_ERR_INVALID_ARG;
@@ -156,7 +154,8 @@ float max30102_apply_lms_filter(lms_filter_t *f, float max30102_raw_ac, float bm
 }
 
 esp_err_t max30102_hr_algorithm_init(void) {
-    return hr_algorithm_init(&g_hr_algorithm, HR_RING_SEC);
+    // Nova assinatura simplificada sem o parâmetro queue_depth
+    return hr_algorithm_init(&g_hr_algorithm);
 }
 
 void vTaskMAX30102(void *pvParameters) {
@@ -178,7 +177,7 @@ void vTaskMAX30102(void *pvParameters) {
         return;
     }
 
-    ESP_LOGI(TAG, "Task MAX30102 iniciada (50Hz data -> HR algorithm)");
+    ESP_LOGI(TAG, "Task MAX30102 iniciada (50Hz -> Ring Buffer PPG)");
 
     int i2c_fail_count = 0;
     int data_fail_count = 0;
@@ -202,7 +201,6 @@ void vTaskMAX30102(void *pvParameters) {
         int available = (wr - rd) & 0x1F;
         int fifo_full = (available == 0) && (intr_status & MAX30102_INTR_STATUS_PPG_RDY);
 
-        // wr == rd pode significar FIFO vazio ou cheio. PPG_RDY desempata.
         if (fifo_full) {
             available = MAX30102_FIFO_DEPTH;
         }
@@ -212,21 +210,11 @@ void vTaskMAX30102(void *pvParameters) {
             continue;
         }
 
-        // Só reinicia a janela quando há backlog real no FIFO.
-        // OVF_COUNTER não é usado como critério: em alguns módulos ele é
-        // impreciso e ficaria gerando gaps falsos.
-        if (fifo_full || available >= 8) {
-            ESP_LOGD(TAG, "FIFO backlog (ovf=%u, disponivel=%d), reiniciando janela",
-                     (unsigned)ovf, available);
-            hr_algorithm_notify_fifo_gap(&g_hr_algorithm);
-        }
-
         err = max30102_read_fifo_burst(fifo_buf, available);
         if (err != ESP_OK) {
             data_fail_count++;
             if (data_fail_count == 1) {
                 ESP_LOGW(TAG, "Falha I2C ao ler dados do FIFO: %s", esp_err_to_name(err));
-                hr_algorithm_notify_fifo_gap(&g_hr_algorithm);
             }
             vTaskDelay(pdMS_TO_TICKS(20));
             continue;
@@ -249,26 +237,14 @@ void vTaskMAX30102(void *pvParameters) {
                 // 2. Aplica filtro LMS: subtrai interferência de movimento
                 float ac_ir_limpo = max30102_apply_lms_filter(&s_lms_filter, (float)ac_ir, s_latest_enmo);
 
-                // 3. Envia amostra para algoritmo HR
+                // 3. Empurra amostra diretamente para o Ring Buffer thread-safe
                 hr_algorithm_push_sample(&g_hr_algorithm, ac_ir_limpo, 1);
             } else {
-                // Dedo removido: notifica o algoritmo (apenas na transição)
+                // Dedo ausente
                 hr_algorithm_push_sample(&g_hr_algorithm, 0.0f, 0);
             }
         }
 
         vTaskDelay(pdMS_TO_TICKS(20));
     }
-}
-
-int max30102_get_bpm(void) {
-    return hr_algorithm_get_bpm(&g_hr_algorithm);
-}
-
-int max30102_get_rmssd(void) {
-    return hr_algorithm_get_rmssd(&g_hr_algorithm);
-}
-
-int max30102_is_finger_present(void) {
-    return hr_algorithm_is_finger_present(&g_hr_algorithm);
 }
