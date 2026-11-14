@@ -1,7 +1,8 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useTheme } from 'styled-components/native';
+import { getDeviceId, saveDeviceId } from '@/utils/onboarding';
 import {
   ActionButton,
   ActionButtonText,
@@ -24,18 +25,29 @@ export default function Onboarding2Screen() {
   const router = useRouter();
   const theme = useTheme();
 
+  useEffect(() => {
+    async function loadSavedDeviceId() {
+      const saved = await getDeviceId();
+      if (saved) {
+        setCode(saved);
+      }
+    }
+    loadSavedDeviceId();
+  }, []);
+
   useFocusEffect(
     useCallback(() => {
       setIsSaving(false);
     }, [])
   );
 
-  const handleInsert = () => {
+  const handleInsert = async () => {
     if (!code.trim()) {
       Alert.alert('Atenção', 'Por favor, digite o código da pulseira');
       return;
     }
     setIsSaving(true);
+    await saveDeviceId(code.trim());
     router.push('/onboarding-3');
   };
 
