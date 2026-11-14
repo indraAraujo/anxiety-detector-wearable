@@ -47,8 +47,13 @@ export default function RootLayout() {
     <ThemeProvider theme={theme}>
       <Stack
         screenOptions={{ headerShown: false }}
-        initialRouteName={showOnboarding ? 'onboarding-1' : undefined}
-      />
+        initialRouteName={showOnboarding ? 'onboarding-1/index' : 'index'}
+      >
+        <Stack.Screen name="index" />
+        <Stack.Screen name="onboarding-1/index" />
+        <Stack.Screen name="onboarding-2/index" />
+        <Stack.Screen name="onboarding-3/index" />
+      </Stack>
     </ThemeProvider>
   );
 }

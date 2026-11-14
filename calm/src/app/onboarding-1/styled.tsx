@@ -10,20 +10,9 @@ export const Scroll = styled.ScrollView.attrs(() => ({
   contentContainerStyle: {
     flexGrow: 1,
     justifyContent: 'space-between',
-    paddingBottom: 24,
+    paddingVertical: 24,
   },
 }))``;
-
-export const BackButton = styled.Pressable`
-  padding: 16px;
-  align-self: flex-start;
-`;
-
-export const BackText = styled.Text`
-  color: ${({ theme }) => theme.colors.textMain};
-  font-family: ${({ theme }) => theme.fonts.bodyMedium};
-  font-size: 16px;
-`;
 
 export const Content = styled.View`
   flex: 1;

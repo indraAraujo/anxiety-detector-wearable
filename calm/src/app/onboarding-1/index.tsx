@@ -1,7 +1,5 @@
 import { useRouter } from 'expo-router';
 import {
-  BackButton,
-  BackText,
   Box,
   ButtonContainer,
   Container,
@@ -22,19 +20,9 @@ export default function Onboarding1Screen() {
     router.push('/onboarding-2');
   };
 
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    }
-  };
-
   return (
     <Container>
       <Scroll>
-        <BackButton onPress={handleBack}>
-          <BackText>← Voltar</BackText>
-        </BackButton>
-
         <Content>
           <Title>Bem-vindo ao CALM</Title>
 
@@ -65,4 +53,3 @@ export default function Onboarding1Screen() {
     </Container>
   );
 }
-

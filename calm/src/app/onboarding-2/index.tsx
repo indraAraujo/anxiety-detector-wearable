@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTheme } from 'styled-components/native';
 import {
   ActionButton,
@@ -24,7 +24,13 @@ export default function Onboarding2Screen() {
   const router = useRouter();
   const theme = useTheme();
 
-  const handleInsert = async () => {
+  useFocusEffect(
+    useCallback(() => {
+      setIsSaving(false);
+    }, [])
+  );
+
+  const handleInsert = () => {
     if (!code.trim()) {
       Alert.alert('Atenção', 'Por favor, digite o código da pulseira');
       return;
@@ -57,7 +63,9 @@ export default function Onboarding2Screen() {
             placeholder="Código da pulseira"
             placeholderTextColor={theme.colors.textMuted}
             value={code}
-            onChangeText={setCode}
+            onChangeText={(text) => setCode(text.replace(/[^0-9]/g, ''))}
+            keyboardType="number-pad"
+            inputMode="numeric"
             autoCapitalize="none"
             returnKeyType="done"
           />
@@ -82,4 +90,3 @@ export default function Onboarding2Screen() {
     </Container>
   );
 }
-
