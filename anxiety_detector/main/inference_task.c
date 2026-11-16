@@ -100,7 +100,7 @@ static void vTaskInference(void *pvParameters) {
             printf(">bpm:%d\n", bpm_momento);
             
             // Publica o BPM REAL medido no instante da inferência
-           // publish_heart_rate((float)bpm_momento, "22222");
+           publish_heart_rate((float)bpm_momento, "111111");
         } else {
             ESP_LOGI(TAG, "Estado Normal/Repouso | BPM: %d | PPG (std: %.2f) | ACC (std: %.2f)",
                      bpm_momento, ppg_std, acc_std);

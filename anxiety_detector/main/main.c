@@ -29,8 +29,8 @@ void app_main(void) {
         return;
     }
 
-    //init_wifi();
-    //init_mqtt();
+    init_wifi();
+    init_mqtt();
 
     ESP_ERROR_CHECK(i2c_master_init());
 

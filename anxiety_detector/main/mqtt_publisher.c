@@ -11,7 +11,7 @@
 
 #include "mqtt_publisher.h"
 
-#define WIFI_SSID      "VIVOFIBRA-2701-5G"
+#define WIFI_SSID      "VIVOFIBRA-2701"
 #define WIFI_PASS      "fHJPeRepqR"
 
 static const char *TAG = "MQTT_PUB";
@@ -104,7 +104,7 @@ static void mqtt_event_handler(void *handler_args, esp_event_base_t base, int32_
 // --- INITIALIZE MQTT ---
 void init_mqtt(void) {
     esp_mqtt_client_config_t mqtt_cfg = {
-        .broker.address.uri = "mqtt://192.168.43.200:1883",
+        .broker.address.uri = "mqtt://192.168.15.6:1883",
         .network.reconnect_timeout_ms = 5000, // Tenta reconectar a cada 5 segundos se falhar
     };
 
