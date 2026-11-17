@@ -3,8 +3,10 @@
 
 idf_component_register(
     # list the source files of this component
-    SRCS "hr_algorithm.c" "inference_task.c" "mqtt_publisher.c" 
-         
+    SRCS "fcm_notifier.c" 
+         "hr_algorithm.c"
+         "inference_task.c"
+         "mqtt_publisher.c" 
          "main.c"
          "shared_config.c"
          "accelerometer.c"
@@ -28,4 +30,9 @@ idf_component_register(
                   esp_event 
                   esp_netif 
                   driver
+                  esp_http_client
+                  cjson
+                  esp-tls
+     
+     EMBED_TXTFILES "google_root_ca.pem"
 )

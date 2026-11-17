@@ -7,6 +7,9 @@
 #include "freertos/task.h"
 #include "mqtt_publisher.h"
 #include <math.h>
+#include "esp_timer.h"
+#include "esp_http_client.h"
+#include "fcm_notifier.h"
 
 static const char *TAG = "INFERENCE_TASK";
 
@@ -21,6 +24,7 @@ static int s_latest_stress_state = 0; // 0: Repouso, 1: Estresse
 
 static scalar_sample_t s_imu_snapshot[WINDOW_SAMPLES_IMU];
 static float s_ppg_snapshot[WINDOW_SAMPLES_PPG];
+
 
 static void vTaskInference(void *pvParameters) {
     ESP_LOGI(TAG, "Task de Inferência iniciada (execução a cada 5 segundos)");
@@ -94,18 +98,26 @@ static void vTaskInference(void *pvParameters) {
 
         // 7. Log e Publicação dos Resultados
         if (predicted_state == 1) {
-            ESP_LOGW(TAG, "ESTRESSE DETECTADO | BPM: %d | PPG (std: %.2f) | ACC (std: %.2f)",
-                     bpm_momento, ppg_std, acc_std);
-            printf(">stress_level:1\n");
-            printf(">bpm:%d\n", bpm_momento);
+            // Envia notificação push Firebase ao detectar ansiedade/estresse
+            fcm_notifier_send_alert(
+                "Opa, ansiedade detectada!",
+                "Entre em contato ou vá até o usuário da pulseira em monitoramento para dar assistência médica"
+            );
+
+            int64_t t_tx_start = esp_timer_get_time();
             
             // Publica o BPM REAL medido no instante da inferência
-           publish_heart_rate((float)bpm_momento, "111111");
+            publish_heart_rate((float)bpm_momento, "111111");
+
+            int64_t t_tx_end = esp_timer_get_time();
+            float tx_duration_ms = (float)(t_tx_end - t_tx_start) / 1000.0f;
+            printf("TEMPO DE PUBLICAÇÃO: %f", tx_duration_ms);
+            
+            ESP_LOGW(TAG, "ESTRESSE DETECTADO | BPM: %d | PPG (std: %.2f) | ACC (std: %.2f)",
+                bpm_momento, ppg_std, acc_std);
         } else {
             ESP_LOGI(TAG, "Estado Normal/Repouso | BPM: %d | PPG (std: %.2f) | ACC (std: %.2f)",
                      bpm_momento, ppg_std, acc_std);
-            printf(">stress_level:0\n");
-            printf(">bpm:%d\n", bpm_momento);
         }
 
         // Intervalo de inferência deslizante (a cada 5 segundos)

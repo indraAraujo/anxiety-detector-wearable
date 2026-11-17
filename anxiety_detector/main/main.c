@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include "esp_log.h"
 #include "esp_err.h"
 #include "shared_config.h"
@@ -10,6 +9,7 @@
 #include "mqtt_publisher.h"
 #include "nvs_flash.h"
 #include "inference_task.h"
+#include "fcm_notifier.h"
 
 static const char *TAG = "ANXIETY_DETECTOR";
 
@@ -31,6 +31,8 @@ void app_main(void) {
 
     init_wifi();
     init_mqtt();
+
+    fcm_notifier_init();
 
     ESP_ERROR_CHECK(i2c_master_init());
 
