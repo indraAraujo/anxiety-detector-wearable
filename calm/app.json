@@ -8,9 +8,12 @@
     "scheme": "calm",
     "userInterfaceStyle": "automatic",
     "ios": {
+      "bundleIdentifier": "com.unicamp.calm",
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.unicamp.calm",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -33,11 +36,20 @@
           "imageWidth": 76
         }
       ],
-      "expo-font"
+      "expo-font",
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2d16638c-a50d-470a-ba7a-54ed050888be"
+      }
+    },
+    "owner": "indraranis-team"
   }
 }
